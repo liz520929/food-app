@@ -102,14 +102,37 @@ export default function Page() {
     return () => window.removeEventListener("beforeinstallprompt", handler as EventListener);
   }, []);
 
-  const filteredItems = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-    return items.filter((item) => {
-      const hitKeyword = !keyword || item.name.toLowerCase().includes(keyword) || item.category.toLowerCase().includes(keyword) || item.location.toLowerCase().includes(keyword);
-      const hitLocation = locationFilter === "全部" || item.location === locationFilter;
-      return hitKeyword && hitLocation;
-    });
-  }, [items, search, locationFilter]);
+  const recommendedRecipes = useMemo(() => {
+  return recipeDatabase
+    .map((recipe) => {
+      const matched = recipe.ingredients.filter((ing) =>
+        items.some((item) => item.name === ing)
+      );
+
+      const missing = recipe.ingredients.filter(
+        (ing) => !items.some((item) => item.name === ing)
+      );
+
+      // 🔥 快過期加權
+      const urgentScore = matched.filter((ing) =>
+        items.some(
+          (item) =>
+            item.name === ing &&
+            (new Date(item.expiryDate).getTime() - Date.now()) /
+              (1000 * 60 * 60 * 24) <= 2
+        )
+      ).length;
+
+      return {
+        ...recipe,
+        matched,
+        missing,
+        score: matched.length * 10 + urgentScore * 20,
+      };
+    })
+    .filter((r) => r.matched.length > 0) // 至少有一樣食材
+    .sort((a, b) => b.score - a.score);
+}, [items]);
 
   const sortedByUrgency = useMemo(() => [...filteredItems].sort((a, b) => daysUntil(a.expiryDate) - daysUntil(b.expiryDate)), [filteredItems]);
   const urgentItems = useMemo(() => items.filter((item) => daysUntil(item.expiryDate) <= 2), [items]);
