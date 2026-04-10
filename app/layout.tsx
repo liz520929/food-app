@@ -1,7 +1,7 @@
 
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
-import { AppInstallScripts } from "@/components/AppInstallScripts";
+import { AppInstallScripts } from "../components/AppInstallScripts";
 
 export const metadata: Metadata = {
   title: "食材庫存小管家",
